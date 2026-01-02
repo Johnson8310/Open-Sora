@@ -136,7 +136,7 @@ def main():
         tb_writer = create_tensorboard_writer(exp_dir)
         if cfg.get("wandb", False):
             wandb.init(
-                project=cfg.get("wandb_project", "Open-Sora"),
+                project=cfg.get("wandb_project", "InstaGen Studio"),
                 name=exp_name,
                 config=cfg.to_dict(),
                 dir=exp_dir,

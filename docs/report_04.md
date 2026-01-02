@@ -1,11 +1,11 @@
-# Open-Sora 1.3 Report
+# InstaGen Studio 1.3 Report
 
 - [Video compression network](#video-compression-network)
 - [Upgraded STDiT with shifted-window attention](#upgraded-stdit-with-shifted-window-attention)
 - [Easy and effective model conditioning](#easy-and-effective-model-conditioning)
 - [Evaluation](#evaluation)
 
-In Open-Sora 1.3 release, we train a 1.1B models on >60M data (\~85k hours), with training cost 35k H100 GPU hours, supporting 0s\~113 frames, 360p & 720p, various aspect ratios video generation. Our configurations is listed below. Following our 1.2 version, Open-Sora 1.3 can also do image-to-video generation and video extension.
+In InstaGen Studio 1.3 release, we train a 1.1B models on >60M data (\~85k hours), with training cost 35k H100 GPU hours, supporting 0s\~113 frames, 360p & 720p, various aspect ratios video generation. Our configurations is listed below. Following our 1.2 version, InstaGen Studio 1.3 can also do image-to-video generation and video extension.
 
 |      | image | 49 frames  | 65 frames  | 81 frames  | 97 frames | 113 frames |
 | ---- | ----- | ---------- | ---------- | ---------- | --------- | ---------- |
@@ -14,7 +14,7 @@ In Open-Sora 1.3 release, we train a 1.1B models on >60M data (\~85k hours), wit
 
 Here ✅ means that the data is seen during training.
 
-Besides features introduced in Open-Sora 1.2, Open-Sora 1.3 highlights:
+Besides features introduced in InstaGen Studio 1.2, InstaGen Studio 1.3 highlights:
 
 - Video compression network
 - Upgraded STDiT with shifted-window attention
@@ -22,26 +22,26 @@ Besides features introduced in Open-Sora 1.2, Open-Sora 1.3 highlights:
 - Easy and effective model conditioning
 - Better evaluation metrics
 
-All implementations (both training and inference) of the above improvements are available in the Open-Sora 1.3 release. The following sections will introduce the details of the improvements. We also refine our codebase and documentation to make it easier to use and develop, and add a LLM refiner to [refine input prompts](/README.md#gpt-4o-prompt-refinement) and support more languages.
+All implementations (both training and inference) of the above improvements are available in the InstaGen Studio 1.3 release. The following sections will introduce the details of the improvements. We also refine our codebase and documentation to make it easier to use and develop, and add a LLM refiner to [refine input prompts](/README.md#gpt-4o-prompt-refinement) and support more languages.
 
 ## Video compression network
 
-In Open-Sora 1.2, the video compression architecture employed a modular approach, where spatial and temporal dimensions were handled separately. The spatial VAE, based on Stability AI's SDXL VAE, compressed individual frames along the spatial dimensions. The temporal VAE then processed the latent representations from the spatial VAE to handle temporal compression. This two-stage design allowed effective spatial and temporal compression but introduced limitations. These included inefficiencies in handling long videos due to fixed-length input frames, a lack of seamless integration between spatial and temporal features, and higher memory requirements during both training and inference.
+In InstaGen Studio 1.2, the video compression architecture employed a modular approach, where spatial and temporal dimensions were handled separately. The spatial VAE, based on Stability AI's SDXL VAE, compressed individual frames along the spatial dimensions. The temporal VAE then processed the latent representations from the spatial VAE to handle temporal compression. This two-stage design allowed effective spatial and temporal compression but introduced limitations. These included inefficiencies in handling long videos due to fixed-length input frames, a lack of seamless integration between spatial and temporal features, and higher memory requirements during both training and inference.
 
-Open-Sora 1.3 introduces a unified approach to video compression. By combining spatial and temporal processing into a single framework and leveraging advanced features like tiled 3D convolutions and dynamic frame support, Open-Sora 1.3 achieves improved better efficiency, scalability, and reconstruction quality. Here are the key improvements in Open-Sora 1.3 VAE:
+InstaGen Studio 1.3 introduces a unified approach to video compression. By combining spatial and temporal processing into a single framework and leveraging advanced features like tiled 3D convolutions and dynamic frame support, InstaGen Studio 1.3 achieves improved better efficiency, scalability, and reconstruction quality. Here are the key improvements in InstaGen Studio 1.3 VAE:
 
-**1. Unified Spatial-Temporal Processing:** Instead of using separate VAEs for spatial and temporal compression, Open-Sora 1.3 adopts a single encoder-decoder structure that simultaneously handles both dimensions. This approach eliminates the need for intermediate representations and redundant data transfers between spatial and temporal modules.
+**1. Unified Spatial-Temporal Processing:** Instead of using separate VAEs for spatial and temporal compression, InstaGen Studio 1.3 adopts a single encoder-decoder structure that simultaneously handles both dimensions. This approach eliminates the need for intermediate representations and redundant data transfers between spatial and temporal modules.
 
-**2. Tiled 3D Convolutions:** Open-Sora 1.3 incorporates tiled 3D convolution support for the temporal dimension. By breaking down videos into smaller temporal tiles, this feature enables efficient encoding and decoding of longer video sequences without increasing memory overhead. This improvement addresses the limitations of Open-Sora 1.2 in handling large frame counts and ensures higher flexibility in temporal compression.
+**2. Tiled 3D Convolutions:** InstaGen Studio 1.3 incorporates tiled 3D convolution support for the temporal dimension. By breaking down videos into smaller temporal tiles, this feature enables efficient encoding and decoding of longer video sequences without increasing memory overhead. This improvement addresses the limitations of InstaGen Studio 1.2 in handling large frame counts and ensures higher flexibility in temporal compression.
 
-**3. Dynamic Micro-Batch and Micro-Frame Processing:** Open-Sora 1.3 introduces a new micro-batch and micro-frame processing mechanism. This allows for: (1) Adaptive temporal overlap: Overlapping frames during temporal encoding and decoding help reduce discontinuities at tile boundaries. (2) Dynamic frame size support: Instead of being restricted to fixed-length sequences (e.g., 17 frames in Open-Sora 1.2), Open-Sora 1.3 supports dynamic sequence lengths, making it robust for varied video lengths.
+**3. Dynamic Micro-Batch and Micro-Frame Processing:** InstaGen Studio 1.3 introduces a new micro-batch and micro-frame processing mechanism. This allows for: (1) Adaptive temporal overlap: Overlapping frames during temporal encoding and decoding help reduce discontinuities at tile boundaries. (2) Dynamic frame size support: Instead of being restricted to fixed-length sequences (e.g., 17 frames in InstaGen Studio 1.2), InstaGen Studio 1.3 supports dynamic sequence lengths, making it robust for varied video lengths.
 
-**4. Unified Normalization Mechanism:** The normalization process in Open-Sora 1.3 has been refined with tunable scaling (scale) and shifting (shift) parameters that ensure consistent latent space distributions across diverse datasets. Unlike Open-Sora 1.2, where normalization was specific to fixed datasets, this version introduces more generalized parameters and support for frame-specific normalization strategies.
+**4. Unified Normalization Mechanism:** The normalization process in InstaGen Studio 1.3 has been refined with tunable scaling (scale) and shifting (shift) parameters that ensure consistent latent space distributions across diverse datasets. Unlike InstaGen Studio 1.2, where normalization was specific to fixed datasets, this version introduces more generalized parameters and support for frame-specific normalization strategies.
 
 
 #### Summary of Improvements
 
-| Feature                | Open-Sora 1.2                          | Open-Sora 1.3                          |
+| Feature                | InstaGen Studio 1.2                          | InstaGen Studio 1.3                          |
 |------------------------|-----------------------------------------|-----------------------------------------|
 | **Architecture**       | Separate spatial and temporal VAEs      | Unified spatial-temporal VAE            |
 | **Tiled Processing**   | Not supported                          | Supported (Tiled 3D Convolutions)       |

@@ -1,10 +1,10 @@
 # Contributing
 
-The Open-Sora project welcomes any constructive contribution from the community and the team is more than willing to work on problems you have encountered to make it a better project.
+The InstaGen Studio project welcomes any constructive contribution from the community and the team is more than willing to work on problems you have encountered to make it a better project.
 
 ## Development Environment Setup
 
-To contribute to Open-Sora, we would like to first guide you to set up a proper development environment so that you can better implement your code. You can install this library from source with the `editable` flag (`-e`, for development mode) so that your change to the source code will be reflected in runtime without re-installation.
+To contribute to InstaGen Studio, we would like to first guide you to set up a proper development environment so that you can better implement your code. You can install this library from source with the `editable` flag (`-e`, for development mode) so that your change to the source code will be reflected in runtime without re-installation.
 
 You can refer to the [Installation Section](./README.md#installation) and replace `pip install -v .` with `pip install -v -e .`.
 
@@ -13,7 +13,7 @@ You can refer to the [Installation Section](./README.md#installation) and replac
 We have some static checks when you commit your code change, please make sure you can pass all the tests and make sure the coding style meets our requirements. We use pre-commit hook to make sure the code is aligned with the writing standard. To set up the code style checking, you need to follow the steps below.
 
 ```shell
-# these commands are executed under the Open-Sora directory
+# these commands are executed under the InstaGen Studio directory
 pip install pre-commit
 pre-commit install
 ```
@@ -26,12 +26,12 @@ You need to follow these steps below to make contribution to the main repository
 
 ### 1. Fork the Official Repository
 
-Firstly, you need to visit the [Open-Sora repository](https://github.com/hpcaitech/Open-Sora) and fork into your own account. The `fork` button is at the right top corner of the web page alongside with buttons such as `watch` and `star`.
+Firstly, you need to visit the [InstaGen Studio repository](https://github.com/hpcaitech/InstaGen Studio) and fork into your own account. The `fork` button is at the right top corner of the web page alongside with buttons such as `watch` and `star`.
 
 Now, you can clone your own forked repository into your local environment.
 
 ```shell
-git clone https://github.com/<YOUR-USERNAME>/Open-Sora.git
+git clone https://github.com/<YOUR-USERNAME>/InstaGen Studio.git
 ```
 
 ### 2. Configure Git
@@ -41,8 +41,8 @@ You need to set the official repository as your upstream so that you can synchro
 Then add the original repository as upstream
 
 ```shell
-cd Open-Sora
-git remote add upstream https://github.com/hpcaitech/Open-Sora.git
+cd InstaGen Studio
+git remote add upstream https://github.com/hpcaitech/InstaGen Studio.git
 ```
 
 you can use the following command to verify that the remote is set. You should see both `origin` and `upstream` in the output.
@@ -83,9 +83,9 @@ git push -u origin <NEW-BRANCH-NAME>
 
 ### 7. Open a Pull Request
 
-You can now create a pull request on the GitHub webpage of your repository. The source branch is `<NEW-BRANCH-NAME>` of your repository and the target branch should be `main` of `hpcaitech/Open-Sora`. After creating this pull request, you should be able to see it [here](https://github.com/hpcaitech/Open-Sora/pulls).
+You can now create a pull request on the GitHub webpage of your repository. The source branch is `<NEW-BRANCH-NAME>` of your repository and the target branch should be `main` of `hpcaitech/InstaGen Studio`. After creating this pull request, you should be able to see it [here](https://github.com/hpcaitech/InstaGen Studio/pulls).
 
-The Open-Sora team will review your code change and merge your code if applicable.
+The InstaGen Studio team will review your code change and merge your code if applicable.
 
 ## FQA
 

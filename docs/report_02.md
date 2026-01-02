@@ -1,4 +1,4 @@
-# Open-Sora 1.1 Report
+# InstaGen Studio 1.1 Report
 
 - [Model Architecture Modification](#model-architecture-modification)
 - [Support for Multi-time/resolution/aspect ratio/fps Training](#support-for-multi-timeresolutionaspect-ratiofps-training)
@@ -7,7 +7,7 @@
 - [Training Details](#training-details)
 - [Limitation and Future Work](#limitation-and-future-work)
 
-In Open-Sora 1.1 release, we train a 700M models on 10M data (Open-Sora 1.0 trained on 400K data) with a better STDiT architecture. We implement the following features mentioned in [sora's report](https://openai.com/research/video-generation-models-as-world-simulators):
+In InstaGen Studio 1.1 release, we train a 700M models on 10M data (InstaGen Studio 1.0 trained on 400K data) with a better STDiT architecture. We implement the following features mentioned in [sora's report](https://openai.com/research/video-generation-models-as-world-simulators):
 
 - Variable durations, resolutions, aspect ratios (Sampling flexibility, Improved framing and composition)
 - Prompting with images and videos (Animating images, Extending generated videos, Video-to-video editing, Connecting videos)
@@ -30,7 +30,7 @@ We made the following modifications to the original ST-DiT for better training s
 As mentioned in the [sora's report](https://openai.com/research/video-generation-models-as-world-simulators), training with original video's resolution, aspect ratio, and length increase sampling flexibility and improve framing and composition. We found three ways to achieve this goal:
 
 - [NaViT](https://arxiv.org/abs/2307.06304): support dynamic size within the same batch by masking, with little efficiency loss. However, the system is a bit complex to implement, and may not benefit from optimized kernels such as flash attention.
-- Padding ([FiT](https://arxiv.org/abs/2402.12376), [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan)): support dynamic size within the same batch by padding. However, padding different resolutions to the same size is not efficient.
+- Padding ([FiT](https://arxiv.org/abs/2402.12376), [InstaGen Studio-Plan](https://github.com/PKU-YuanGroup/InstaGen Studio-Plan)): support dynamic size within the same batch by padding. However, padding different resolutions to the same size is not efficient.
 - Bucket ([SDXL](https://arxiv.org/abs/2307.01952), [PixArt](https://arxiv.org/abs/2310.00426)): support dynamic size in different batches by bucketing, but the size must be the same within the same batch, and only a fixed number of size can be applied. With the same size in a batch, we do not need to implement complex masking or padding.
 
 For the simplicity of implementation, we choose the bucket method. We pre-define some fixed resolution, and allocate different samples to different bucket. The concern for bucketing is listed below. But we can see that the concern is not a big issue in our case.
@@ -45,7 +45,7 @@ For the simplicity of implementation, we choose the bucket method. We pre-define
 
 </details>
 
-![bucket](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_bucket.png)
+![bucket](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_bucket.png)
 
 As shown in the figure, a bucket is a triplet of `(resolution, num_frame, aspect_ratio)`. We provide pre-defined aspect ratios for different resolution that covers most of the common video aspect ratios. Before each epoch, we shuffle the dataset and allocate the samples to different buckets as shown in the figure. We put a sample into a bucket with largest resolution and frame length that is smaller than the video's.
 
@@ -57,50 +57,50 @@ A detailed explanation of the bucket usage in training is available in [docs/con
 
 Transformers can be easily extended to support image-to-image and video-to-video tasks. We propose a mask strategy to support image and video conditioning. The mask strategy is shown in the figure below.
 
-![mask strategy](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_mask.png)
+![mask strategy](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_mask.png)
 
 Typically, we unmask the frames to be conditioned on for image/video-to-video condition. During the ST-DiT forward, unmasked frames will have timestep 0, while others remain the same (t). We find directly apply the strategy to trained model yield poor results as the diffusion model did not learn to handle different timesteps in one sample during training.
 
-Inspired by [UL2](https://arxiv.org/abs/2205.05131), we introduce random mask strategy during training. Specifically, we randomly unmask the frames during training, including unmask the first frame, the first k frames, the last frame, the last k frames, the first and last k frames, random frames, etc. Based on Open-Sora 1.0, with 50% probability of applying masking, we see the model can learn to handle image conditioning (while 30% yields worse ability) for 10k steps, with a little text-to-video performance drop. Thus, for Open-Sora 1.1, we pretrain the model from scratch with masking strategy.
+Inspired by [UL2](https://arxiv.org/abs/2205.05131), we introduce random mask strategy during training. Specifically, we randomly unmask the frames during training, including unmask the first frame, the first k frames, the last frame, the last k frames, the first and last k frames, random frames, etc. Based on InstaGen Studio 1.0, with 50% probability of applying masking, we see the model can learn to handle image conditioning (while 30% yields worse ability) for 10k steps, with a little text-to-video performance drop. Thus, for InstaGen Studio 1.1, we pretrain the model from scratch with masking strategy.
 
 An illustration of masking strategy config to use in inference is given as follow. A five number tuple provides great flexibility in defining the mask strategy. By conditioning on generated frames, we can autogressively generate infinite frames (although error propagates).
 
-![mask strategy config](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_mask_config.png)
+![mask strategy config](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_mask_config.png)
 
 A detailed explanation of the mask strategy usage is available in [docs/config.md](/docs/config.md#advanced-inference-config).
 
 ## Data Collection & Pipeline
 
-As we found in Open-Sora 1.0, the data number and quality are crucial for training a good model, we work hard on scaling the dataset. First, we create an automatic pipeline following [SVD](https://arxiv.org/abs/2311.15127), inlcuding scene cutting, captioning, various scoring and filtering, and dataset management scripts and conventions. More infomation can be found in [docs/data_processing.md](/docs/data_processing.md).
+As we found in InstaGen Studio 1.0, the data number and quality are crucial for training a good model, we work hard on scaling the dataset. First, we create an automatic pipeline following [SVD](https://arxiv.org/abs/2311.15127), inlcuding scene cutting, captioning, various scoring and filtering, and dataset management scripts and conventions. More infomation can be found in [docs/data_processing.md](/docs/data_processing.md).
 
-![pipeline](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_data_pipeline.png)
+![pipeline](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_data_pipeline.png)
 
 We plan to use [panda-70M](https://snap-research.github.io/Panda-70M/) and other data to traing the model, which is approximately 30M+ data. However, we find disk IO a botteleneck for training and data processing at the same time. Thus, we can only prepare a 10M dataset and did not go through all processing pipeline that we built. Finally, we use a dataset with 9.7M videos + 2.6M images for pre-training, and 560k videos + 1.6M images for fine-tuning. The pretraining dataset statistics are shown below. More information about the dataset can be found in [docs/datasets.md](/docs/datasets.md).
 
 Image text tokens (by T5 tokenizer):
 
-![image text tokens](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_image_textlen.png)
+![image text tokens](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_image_textlen.png)
 
 Video text tokens (by T5 tokenizer). We directly use panda's short caption for training, and caption other datasets by ourselves. The generated caption is usually less than 200 tokens.
 
-![video text tokens](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_video_textlen.png)
+![video text tokens](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_video_textlen.png)
 
 Video duration:
 
-![video duration](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_video_duration.png)
+![video duration](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_video_duration.png)
 
 ## Training Details
 
-With limited computational resources, we have to carefully monitor the training process, and change the training strategy if we speculate the model is not learning well since there is no computation for ablation study. Thus, Open-Sora 1.1's training includes multiple changes, and as a result, ema is not applied.
+With limited computational resources, we have to carefully monitor the training process, and change the training strategy if we speculate the model is not learning well since there is no computation for ablation study. Thus, InstaGen Studio 1.1's training includes multiple changes, and as a result, ema is not applied.
 
 1. First, we fine-tune **6k** steps with images of different resolution from `Pixart-alpha-1024` checkpoints. We find the model easily adapts to generate images with different resolutions. We use [SpeeDiT](https://github.com/1zeryu/SpeeDiT) (iddpm-speed) to accelerate the diffusion training.
 2. **[Stage 1]** Then, we pretrain the model with gradient-checkpointing for **24k** steps, which takes **4 days** on 64 H800 GPUs. Although the number of samples seen by the model is the same, we find the model learns slowly compared to a smaller batch size. We speculate that at an early stage, the number of steps is more important for training. The most videos are in **240p** resolution, and the config is similar to [stage2.py](/configs/opensora-v1-1/train/stage2.py). The video looking is good, but the model does not know much about the temporal knowledge. We use mask ratio of 10%.
-3. **[Stage 1]** To increase the number of steps, we switch to a smaller batch size without gradient-checkpointing. We also add fps conditioning at this point. We trained **40k** steps for **2 days**. The most videos are in **144p** resolution, and the config file is [stage1.py](/configs/opensora-v1-1/train/stage1.py). We use a lower resolution as we find in Open-Sora 1.0 that the model can learn temporal knowledge with relatively low resolution.
-4. **[Stage 1]** We find the model cannot learn well for long videos, and find a noised generation result as speculated to be half-precision problem found in Open-Sora 1.0 training. Thus, we adopt the QK-normalization to stabilize the training. Similar to SD3, we find the model quickly adapt to the QK-normalization. We also switch iddpm-speed to iddpm, and increase the mask ratio to 25% as we find image-condition not learning well. We trained for **17k** steps for **14 hours**. The most videos are in **144p** resolution, and the config file is [stage1.py](/configs/opensora-v1-1/train/stage1.py). The stage 1 training lasts for approximately one week, with total step **81k**.
+3. **[Stage 1]** To increase the number of steps, we switch to a smaller batch size without gradient-checkpointing. We also add fps conditioning at this point. We trained **40k** steps for **2 days**. The most videos are in **144p** resolution, and the config file is [stage1.py](/configs/opensora-v1-1/train/stage1.py). We use a lower resolution as we find in InstaGen Studio 1.0 that the model can learn temporal knowledge with relatively low resolution.
+4. **[Stage 1]** We find the model cannot learn well for long videos, and find a noised generation result as speculated to be half-precision problem found in InstaGen Studio 1.0 training. Thus, we adopt the QK-normalization to stabilize the training. Similar to SD3, we find the model quickly adapt to the QK-normalization. We also switch iddpm-speed to iddpm, and increase the mask ratio to 25% as we find image-condition not learning well. We trained for **17k** steps for **14 hours**. The most videos are in **144p** resolution, and the config file is [stage1.py](/configs/opensora-v1-1/train/stage1.py). The stage 1 training lasts for approximately one week, with total step **81k**.
 5. **[Stage 2]** We switch to a higher resolution, where most videos are in **240p and 480p** resolution ([stage2.py](/configs/opensora-v1-1/train/stage2.py)). We trained **22k** steps for **one day** on all pre-training data.
 6. **[Stage 3]** We switch to a higher resolution, where most videos are in **480p and 720p** resolution ([stage3.py](/configs/opensora-v1-1/train/stage3.py)). We trained **4k** with **one day** on high-quality data. We find loading previous stage's optimizer state can help the model learn faster.
 
-To summarize, the training of Open-Sora 1.1 requires approximately **9 days** on 64 H800 GPUs.
+To summarize, the training of InstaGen Studio 1.1 requires approximately **9 days** on 64 H800 GPUs.
 
 ## Limitation and Future Work
 

@@ -11,7 +11,7 @@ pip install pandarallel # for parallel processing
 
 ## Prepare dataset
 
-The dataset should be presented in a `csv` or `parquet` file. To better illustrate the process, we will use a 45k [pexels dataset](https://huggingface.co/datasets/hpcai-tech/open-sora-pexels-45k) as an example. This dataset contains clipped, score filtered high-quality videos from [Pexels](https://www.pexels.com/).
+The dataset should be presented in a `csv` or `parquet` file. To better illustrate the process, we will use a 45k [pexels dataset](https://huggingface.co/datasets/hpcai-tech/InstaGen Studio-pexels-45k) as an example. This dataset contains clipped, score filtered high-quality videos from [Pexels](https://www.pexels.com/).
 
 First, download the dataset to your local machine:
 
@@ -19,12 +19,12 @@ First, download the dataset to your local machine:
 mkdir datasets
 cd datasets
 # For Chinese users, export HF_ENDPOINT=https://hf-mirror.com to speed up the download
-huggingface-cli download --repo-type dataset hpcai-tech/open-sora-pexels-45k --local-dir open-sora-pexels-45k # 250GB
+huggingface-cli download --repo-type dataset hpcai-tech/InstaGen Studio-pexels-45k --local-dir InstaGen Studio-pexels-45k # 250GB
 
-cd open-sora-pexels-45k
+cd InstaGen Studio-pexels-45k
 cat tar/pexels_45k.tar.* > pexels_45k.tar
 tar -xvf pexels_45k.tar
-mv pexels_45k .. # make sure the path is Open-Sora/datasets/pexels_45k
+mv pexels_45k .. # make sure the path is InstaGen Studio/datasets/pexels_45k
 ```
 
 There are three `csv` files provided:
@@ -103,7 +103,7 @@ We also provide a demo config `demo.py` with small batch size for debugging.
 
 ### Fine-tuning
 
-To finetune from Open-Sora v2, run:
+To finetune from InstaGen Studio v2, run:
 
 ```bash
 torchrun --nproc_per_node 8 scripts/diffusion/train.py configs/diffusion/train/stage1.py --dataset.data-path datasets/pexels_45k_necessary.csv --model.from_pretrained ckpts/Open_Sora_v2.safetensors

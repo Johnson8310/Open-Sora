@@ -1,4 +1,4 @@
-# Open-Sora 1.1 技术报告
+# InstaGen Studio 1.1 技术报告
 
 - [模型架构修改](#模型架构修改)
 - [支持不同视频长度/分辨率/宽高比/帧率（fps）训练](#支持不同视频长度分辨率宽高比帧率fps训练)
@@ -8,7 +8,7 @@
 - [结果和评价](#结果和评价)
 - [不足和下一步计划](#不足和下一步计划)
 
-在Open-Sora1.1版本中，我们使用了10M数据来训练经过结构调优后的STDiT的700M模型（Open-Sora1.0版本仅用400K数据）。我们实现了[Sora报告](https://openai.com/research/video-generation-models-as-world-simulators)中提到的以下功能：
+在InstaGen Studio1.1版本中，我们使用了10M数据来训练经过结构调优后的STDiT的700M模型（InstaGen Studio1.0版本仅用400K数据）。我们实现了[Sora报告](https://openai.com/research/video-generation-models-as-world-simulators)中提到的以下功能：
 
 - 可变的视频时长、分辨率、宽高比（包括采样灵活性、改进的取景范围和构图）
 - 提示词增加图片和视频选项（使图像动起来、生成式增长视频、视频到视频编辑、连接不同视频）
@@ -30,7 +30,7 @@
 
 正如[Sora报告](https://openai.com/research/video-generation-models-as-world-simulators)中提到的，使用原始无损视频的分辨率、宽高比和视频长度进行训练可以增加采样灵活性，改善取景和构图。我们找到了三种实现这一目标的方法：
 - [NaViT](https://arxiv.org/abs/2307.06304)：通过不同掩码策略支持在同一训练批次内使用不同大小的数据，并且训练效率下降很少。然而，该系统实现起来有点复杂，并且可能无法兼容kernal优化技术（如flashattention）。
-- 填充（[FiT](https://arxiv.org/abs/2402.12376)，[Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan)）：通过填充支持同一批次内的不同大小的数据。然而，将不同的分辨率填充到相同的大小会导致效率降低。
+- 填充（[FiT](https://arxiv.org/abs/2402.12376)，[InstaGen Studio-Plan](https://github.com/PKU-YuanGroup/InstaGen Studio-Plan)）：通过填充支持同一批次内的不同大小的数据。然而，将不同的分辨率填充到相同的大小会导致效率降低。
 - 分桶训练（[SDXL](https://arxiv.org/abs/2307.01952)、[PixArt](https://arxiv.org/abs/2310.00426)）：支持通过分桶的方式在不同批次中动态调整大小，但在同一批次内数据大小必须相同，只能应用固定数量的数据大小。在一个批次中，我们不需要实现复杂的掩码或填充。
 
 为了更便捷的实现，我们选择分桶训练的方式。我们预先定义了一些固定的分辨率，并将不同的样本分配到不同的桶中。下面列出了分桶方案中值得注意的点。但我们可以看到，这些在我们的实验中并不是一个大问题。
@@ -45,7 +45,7 @@
 
 </details>
 
-![bucket](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_bucket.png)
+![bucket](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_bucket.png)
 
 如图所示，桶是（分辨率，帧数量，宽高比）的三元组。我们为不同的分辨率提供预定义的宽高比，涵盖了大多数常见的视频宽高比。在每个epoch之前，我们打乱数据集并将样本分配到不同的桶中，如图所示。我们将样本放入最大分辨率和帧长度小于视频的桶中。
 
@@ -57,15 +57,15 @@
 
 Transformer可以很容易地扩展到支持图生图和视频生视频的任务。我们提出了一种蒙版策略来支持图像和视频的调节。蒙版策略如下图所示。
 
-![mask strategy](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_mask.png)
+![mask strategy](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_mask.png)
 
 在将图像或视频转换成另一个视频的过程中，我们通常会选择出需要作为条件的帧并取消其掩码（unmask）。在使用ST-DiT模型进行前向传播时，被选择取消掩码（unmask）的帧将被赋予时间步长0，而其他帧则保持它们原有的时间步长t。我们发现，如果直接将这种策略应用到训练好的模型上，会得到较差的结果，因为扩散模型在训练过程中并未学会如何处理一个样本中具有不同时间步长的帧。
 
-受[UL2](https://arxiv.org/abs/2205.05131)的启发，我们在训练期间引入了随机掩码策略。具体来说，我们在训练期间随机取消掩码帧，包括取消掩码第一帧，前k帧，最后k帧，最后k帧，第一和最后k帧，随机帧等。基于Open-Sora 1.0模型，以50%的概率应用掩码策略，我们发现模型能够在10,000步的训练中学会处理图像条件（而30%的概率会导致处理能力变差），同时文本到视频的性能略有下降。因此，在Open-Sora 1.1版本中，我们从头开始预训练模型，并采用了掩码策略。
+受[UL2](https://arxiv.org/abs/2205.05131)的启发，我们在训练期间引入了随机掩码策略。具体来说，我们在训练期间随机取消掩码帧，包括取消掩码第一帧，前k帧，最后k帧，最后k帧，第一和最后k帧，随机帧等。基于InstaGen Studio 1.0模型，以50%的概率应用掩码策略，我们发现模型能够在10,000步的训练中学会处理图像条件（而30%的概率会导致处理能力变差），同时文本到视频的性能略有下降。因此，在InstaGen Studio 1.1版本中，我们从头开始预训练模型，并采用了掩码策略。
 
 下图给出了用于推理的掩码策略配置的说明。五数字元组在定义掩码策略方面提供了极大的灵活性。
 
-![mask strategy config](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_mask_config.png)
+![mask strategy config](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_mask_config.png)
 
 掩码策略用法的详细说明可在[配置文件](/docs/config.md#advanced-inference-config)中查看.
 
@@ -74,27 +74,27 @@ Transformer可以很容易地扩展到支持图生图和视频生视频的任务
 
 正如我们在Sora1.0版本中看见的那样，数据数量和质量对于训练一个好的模型至关重要，因此，我们努力扩展数据集。首先，我们创建了一个遵循[SVD](https://arxiv.org/abs/2311.15127)的自动流水线，包括场景切割、字幕、各种评分和过滤以及数据集管理脚本和通用惯例。
 
-![pipeline](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_data_pipeline.png)
+![pipeline](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_data_pipeline.png)
 
 我们计划使用[panda-70M](https://snap-research.github.io/Panda-70M/)和其他数据来训练模型，大约包含3000万条数据。然而，我们发现磁盘输入输出（disk IO）在同时进行训练和数据处理时成为了一个瓶颈。因此，我们只能准备一个包含1000万条数据的数据集，并且没有完成我们构建的所有处理流程。最终，我们使用了包含970万视频和260万图像的数据集进行预训练，以及560,000视频和160万图像的数据集进行微调。预训练数据集的统计信息如下所示。
 
 图像文本标记 (使用T5分词器)：
-![image text tokens](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_image_textlen.png)
+![image text tokens](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_image_textlen.png)
 
 视频文本标记 (使用T5分词器)。我们直接使用Panda的短视频描述进行训练，并自己给其他数据集加视频描述。生成的字幕通常少于200个token。
-![video text tokens](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_video_textlen.png)
+![video text tokens](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_video_textlen.png)
 
 视频时长：
-![video duration](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_video_duration.png)
+![video duration](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_video_duration.png)
 
 ## 训练详情
 
-由于计算资源有限，我们必须仔细监控训练过程，并在推测模型学习不佳时更改训练策略，因为没有消融研究的计算。因此，Open-Sora1.1版本的训练包括多个更改，所以，指数移动平均（EMA）未被应用。
+由于计算资源有限，我们必须仔细监控训练过程，并在推测模型学习不佳时更改训练策略，因为没有消融研究的计算。因此，InstaGen Studio1.1版本的训练包括多个更改，所以，指数移动平均（EMA）未被应用。
 
 1. 首先，我们从`Pixart-alpha-1024`的模型checkpoint开始，使用不同分辨率的图像进行了6000步的微调。我们发现模型能够很容易地适应并生成不同分辨率的图像。为了加快扩散过程的训练，我们使用了[SpeeDiT](https://github.com/1zeryu/SpeeDiT)（iddpm-speed）技术。
 2. **[阶段一]** 然后，我们使用梯度检查点（gradient-checkpointing）技术对模型进行了**24,000**步的预训练，这个过程在64个H800 GPU上运行了**4天**。尽管模型看到的数据样本数量相同，我们发现与使用较小批量大小相比，模型的学习速度较慢。我们推测，在训练的早期阶段，步数的数量对于训练更为重要。大多数视频的分辨率是**240p**，预训练时使用的配置与[stage2.py](/configs/opensora-v1-1/train/stage2.py)相似。
-3. **[阶段一]** 为了增加训练步数，我们改用了更小的批量大小，并且没有使用梯度检查点技术。在这个阶段，我们还引入了帧率（fps）条件。模型训练了**40,000**步，持续了**2天**。训练中使用的视频大多数是**144p**分辨率，使用的配置文件是[stage1.py](/configs/opensora-v1-1/train/stage1.py)。我们使用较低的分辨率，因为我们在Open-Sora 1.0版本中发现模型可以以相对较低的分辨率学习时间知识。
-4. **[阶段一]** 我们发现模型不能很好地学习长视频，并在Open-Sora1.0训练中发现了一个噪声生成结果，推测是半精度问题。因此，我们采用QK-归一化来稳定训练。我们还将iddpm-speed切换成iddpm。我们训练了**17k**步**14小时**。大多数视频的分辨率是144p，预训练时使用的配置是[stage1.py](/configs/opensora-v1-1/train/stage1.py)。阶段1训练持续约一周，总步长**81k**。
+3. **[阶段一]** 为了增加训练步数，我们改用了更小的批量大小，并且没有使用梯度检查点技术。在这个阶段，我们还引入了帧率（fps）条件。模型训练了**40,000**步，持续了**2天**。训练中使用的视频大多数是**144p**分辨率，使用的配置文件是[stage1.py](/configs/opensora-v1-1/train/stage1.py)。我们使用较低的分辨率，因为我们在InstaGen Studio 1.0版本中发现模型可以以相对较低的分辨率学习时间知识。
+4. **[阶段一]** 我们发现模型不能很好地学习长视频，并在InstaGen Studio1.0训练中发现了一个噪声生成结果，推测是半精度问题。因此，我们采用QK-归一化来稳定训练。我们还将iddpm-speed切换成iddpm。我们训练了**17k**步**14小时**。大多数视频的分辨率是144p，预训练时使用的配置是[stage1.py](/configs/opensora-v1-1/train/stage1.py)。阶段1训练持续约一周，总步长**81k**。
 5. **[阶段二]** 我们切换到更高的分辨率，其中大多数视频是**240p和480p**分辨率（[stage2.py](/configs/opensora-v1-1/train/stage2.py)）。我们在所有预训练数据上训练了**22000**步，持续**一天**。
 6. **[阶段三]** 我们切换到更高的分辨率，大多数视频的分辨率是**480p和720p**（[stage3.py](/configs/opensora-v1-1/train/stage3.py)）。我们在高质量数据上训了**4000**步，用时**一天**。
 

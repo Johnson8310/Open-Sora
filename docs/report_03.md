@@ -1,4 +1,4 @@
-# Open-Sora 1.2 Report
+# InstaGen Studio 1.2 Report
 
 - [Video compression network](#video-compression-network)
 - [Rectified flow and model adaptation](#rectified-flow-and-model-adaptation)
@@ -7,7 +7,7 @@
 - [Evaluation](#evaluation)
 - [Sequence parallelism](#sequence-parallelism)
 
-In Open-Sora 1.2 release, we train a 1.1B models on >30M data (\~80k hours), with training cost 35k H100 GPU hours, supporting 0s\~16s, 144p to 720p, various aspect ratios video generation. Our configurations is listed below. Following our 1.1 version, Open-Sora 1.2 can also do image-to-video generation and video extension.
+In InstaGen Studio 1.2 release, we train a 1.1B models on >30M data (\~80k hours), with training cost 35k H100 GPU hours, supporting 0s\~16s, 144p to 720p, various aspect ratios video generation. Our configurations is listed below. Following our 1.1 version, InstaGen Studio 1.2 can also do image-to-video generation and video extension.
 
 |      | image | 2s  | 4s  | 8s  | 16s |
 | ---- | ----- | --- | --- | --- | --- |
@@ -18,7 +18,7 @@ In Open-Sora 1.2 release, we train a 1.1B models on >30M data (\~80k hours), wit
 
 Here ✅ means that the data is seen during training, and 🆗 means although not trained, the model can inference at that config. Inference for 🆗 requires more than one 80G memory GPU and sequence parallelism.
 
-Besides features introduced in Open-Sora 1.1, Open-Sora 1.2 highlights:
+Besides features introduced in InstaGen Studio 1.1, InstaGen Studio 1.2 highlights:
 
 - Video compression network
 - Rectifie-flow training
@@ -26,15 +26,15 @@ Besides features introduced in Open-Sora 1.1, Open-Sora 1.2 highlights:
 - Easy and effective model conditioning
 - Better evaluation metrics
 
-All implementations (both training and inference) of the above improvements are available in the Open-Sora 1.2 release. The following sections will introduce the details of the improvements. We also refine our codebase and documentation to make it easier to use and develop, and add a LLM to [refine input prompts](/README.md#gpt-4o-prompt-refinement) and support more languages.
+All implementations (both training and inference) of the above improvements are available in the InstaGen Studio 1.2 release. The following sections will introduce the details of the improvements. We also refine our codebase and documentation to make it easier to use and develop, and add a LLM to [refine input prompts](/README.md#gpt-4o-prompt-refinement) and support more languages.
 
 ## Video compression network
 
-For Open-Sora 1.0 & 1.1, we used stability-ai's 83M 2D VAE, which compress the video only in the spatial dimension by 8x8 times. To reduce the temporal dimension, we extracted one frame in every three frames. However, this method led to the low fluency of generated video as the generated fps is sacrificed. Thus, in this release, we introduce the video compression network as OpenAI's Sora does. With a 4 times compression in the temporal dimension, we do not need to extract frames and can generate videos with the original fps.
+For InstaGen Studio 1.0 & 1.1, we used stability-ai's 83M 2D VAE, which compress the video only in the spatial dimension by 8x8 times. To reduce the temporal dimension, we extracted one frame in every three frames. However, this method led to the low fluency of generated video as the generated fps is sacrificed. Thus, in this release, we introduce the video compression network as OpenAI's Sora does. With a 4 times compression in the temporal dimension, we do not need to extract frames and can generate videos with the original fps.
 
 Considering the high computational cost of training a 3D VAE, we hope to re-use the knowledge learnt in the 2D VAE. We notice that after 2D VAE's compression, the features adjacent in the temporal dimension are still highly correlated. Thus, we propose a simple video compression network, which first compress the video in the spatial dimension by 8x8 times, then compress the video in the temporal dimension by 4x times. The network is shown below:
 
-![video_compression_network](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_3d_vae.png)
+![video_compression_network](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_3d_vae.png)
 
 We initialize the 2D VAE with [SDXL's VAE](https://huggingface.co/stabilityai/sdxl-vae), which is better than our previously used one. For the 3D VAE, we adopt the structure of VAE in [Magvit-v2](https://magvit.cs.cmu.edu/v2/), which contains 300M parameters. Along with 83M 2D VAE, the total parameters of the video compression network is 384M. We train the 3D VAE for 1.2M steps with local batch size 1. The training data is videos from pixels and pixabay, and the training video size is mainly 17 frames, 256x256 resolution. Causal convolutions are used in the 3D VAE to make the image reconstruction more accurate.
 
@@ -44,18 +44,18 @@ Our training involves three stages:
 2. For the next 260k steps, We remove the identity loss and just learn the 3D VAE.
 3. For the last 540k steps , since we find only reconstruction 2D VAE's feature cannot lead to further improvement, we remove the loss and train the whole VAE to reconstruct the original videos. This stage is trained on on 24 GPUs.
 
-For both stage 1 and stage 2 training, we adopt 20% images and 80% videos. Following [Magvit-v2](https://magvit.cs.cmu.edu/v2/), we train video using 17 frames, while zero-padding the first 16 frames for image. However, we find that this setting leads to blurring of videos with length different from 17 frames. Thus, in stage 3, we use a random number within 34 frames for mixed video length training (a.k.a., zero-pad the first  `43-n` frames if we want to train a `n` frame video), to make our VAE more robust to different video lengths. Our [training](/scripts/train_vae.py) and [inference](/scripts/inference_vae.py) code is available in the Open-Sora 1.2 release.
+For both stage 1 and stage 2 training, we adopt 20% images and 80% videos. Following [Magvit-v2](https://magvit.cs.cmu.edu/v2/), we train video using 17 frames, while zero-padding the first 16 frames for image. However, we find that this setting leads to blurring of videos with length different from 17 frames. Thus, in stage 3, we use a random number within 34 frames for mixed video length training (a.k.a., zero-pad the first  `43-n` frames if we want to train a `n` frame video), to make our VAE more robust to different video lengths. Our [training](/scripts/train_vae.py) and [inference](/scripts/inference_vae.py) code is available in the InstaGen Studio 1.2 release.
 
-When using the VAE for diffusion model, our stacked VAE requires small memory as the our VAE's input is already compressed. We also split the input videos input several 17 frames clips to make the inference more efficient.  The performance of our VAE is on par with another open-sourced 3D VAE in [Open-Sora-Plan](https://github.com/PKU-YuanGroup/Open-Sora-Plan/blob/main/docs/Report-v1.1.0.md).
+When using the VAE for diffusion model, our stacked VAE requires small memory as the our VAE's input is already compressed. We also split the input videos input several 17 frames clips to make the inference more efficient.  The performance of our VAE is on par with another open-sourced 3D VAE in [InstaGen Studio-Plan](https://github.com/PKU-YuanGroup/InstaGen Studio-Plan/blob/main/docs/Report-v1.1.0.md).
 
 | Model              | SSIM↑ | PSNR↑  |
 | ------------------ | ----- | ------ |
-| Open-Sora-Plan 1.1 | 0.882 | 29.890 |
-| Open-Sora 1.2      | 0.880 | 30.590 |
+| InstaGen Studio-Plan 1.1 | 0.882 | 29.890 |
+| InstaGen Studio 1.2      | 0.880 | 30.590 |
 
 ## Rectified flow and model adaptation
 
-Lastest diffusion model like Stable Diffusion 3 adopts the [rectified flow](https://github.com/gnobitab/RectifiedFlow) instead of DDPM for better performance. Pitiably, SD3's rectified flow training code is not open-sourced. However, Open-Sora 1.2 provides the training code following SD3's paper, including:
+Lastest diffusion model like Stable Diffusion 3 adopts the [rectified flow](https://github.com/gnobitab/RectifiedFlow) instead of DDPM for better performance. Pitiably, SD3's rectified flow training code is not open-sourced. However, InstaGen Studio 1.2 provides the training code following SD3's paper, including:
 
 - Basic rectified flow training ([original rectified flow paper](https://arxiv.org/abs/2209.03003))
 - Logit-norm sampling for training acceleration ([SD3 paper](https://arxiv.org/pdf/2403.03206) Section 3.1, intuitively it is more likely to sample timesteps at middle noise level)
@@ -63,7 +63,7 @@ Lastest diffusion model like Stable Diffusion 3 adopts the [rectified flow](http
 
 For the resolution-aware timestep sampling, we should use more noise for images with larger resolution. We extend this idea to video generation and use more noise for videos with longer length.
 
-Open-Sora 1.2 starts from the [PixArt-Σ 2K](https://github.com/PixArt-alpha/PixArt-sigma) checkpoint. Note that this model is trained with DDPM and SDXL VAE, also a much higher resolution. We find finetuning on a small dataset can easily adapt the model for our video generation setting. The adaptation process is as follows, all training is done on 8 GPUs (the adaptation for the diffusion model is quite fast and straightforward):
+InstaGen Studio 1.2 starts from the [PixArt-Σ 2K](https://github.com/PixArt-alpha/PixArt-sigma) checkpoint. Note that this model is trained with DDPM and SDXL VAE, also a much higher resolution. We find finetuning on a small dataset can easily adapt the model for our video generation setting. The adaptation process is as follows, all training is done on 8 GPUs (the adaptation for the diffusion model is quite fast and straightforward):
 
 1. Multi-resolution image generation ability: we train the model to generate different resolution ranging from 144p to 2K for 20k steps.
 2. QK-norm: we add the QK-norm to the model and train for 18k steps.
@@ -108,9 +108,9 @@ While MiraData and Vript have captions from GPT, we use [PLLaVA](https://github.
 
 Some statistics of the video data used in this stage are shown below. We present basic statistics of duration and resolution, as well as aesthetic score and optical flow score distribution.
 We also extract tags for objects and actions from video captions and count their frequencies.
-![stats](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report-03_video_stats.png)
-![object_count](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report-03_objects_count.png)
-![object_count](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report-03_actions_count.png)
+![stats](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report-03_video_stats.png)
+![object_count](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report-03_objects_count.png)
+![object_count](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report-03_actions_count.png)
 
 We mainly train 720p and 1080p videos in this stage, aiming to extend the model's ability to larger resolutions. We use a mask ratio of 25% during training. The training config locates in [stage3.py](/configs/opensora-v1-2/train/stage3.py). We train the model for 15k steps, which is approximately 2 epochs.
 
@@ -132,25 +132,25 @@ Previously, we monitor the training process only by human evaluation, as DDPM tr
 
 We sampled 1k videos from pixabay as validation dataset. We calculate the evaluation loss for image and different lengths of videos (2s, 4s, 8s, 16s) for different resolution (144p, 240p, 360p, 480p, 720p). For each setting, we equidistantly sample 10 timesteps. Then all the losses are averaged. We also provide a [video](https://streamable.com/oqkkf1) showing the sampled videos with a fixed prompt for different steps.
 
-![Evaluation Loss](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_val_loss.png)
-![Video Evaluation Loss](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_vid_val_loss.png)
+![Evaluation Loss](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_val_loss.png)
+![Video Evaluation Loss](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_vid_val_loss.png)
 
 In addition, we also keep track of [VBench](https://vchitect.github.io/VBench-project/) scores during training. VBench is an automatic video evaluation benchmark for short video generation. We calcuate the vbench score with 240p 2s videos. The two metrics verify that our model continues to improve during training.
 
-![VBench](https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/report_vbench_score.png)
+![VBench](https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/report_vbench_score.png)
 
 All the evaluation code is released in `eval` folder. Check the [README](/eval/README.md) for more details.
 
 | Model          | Total Score | Quality Score | Semantic Score |
 | -------------- | ----------- | ------------- | -------------- |
-| Open-Sora V1.0 | 75.91%      | 78.81%        | 64.28%         |
-| Open-Sora V1.2 | 79.23%      | 80.71%        | 73.30%         |
+| InstaGen Studio V1.0 | 75.91%      | 78.81%        | 64.28%         |
+| InstaGen Studio V1.2 | 79.23%      | 80.71%        | 73.30%         |
 
 ## Sequence parallelism
 
 We use sequence parallelism to support long-sequence training and inference. Our implementation is based on Ulysses and the workflow is shown below. When sequence parallelism is enabled, we only need to apply the `all-to-all` communication to the spatial block in STDiT as only spatial computation is dependent on the sequence dimension.
 
-![SP](..https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/sequence_parallelism.jpeg)
+![SP](..https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/sequence_parallelism.jpeg)
 
 Currently, we have not used sequence parallelism for training as data resolution is small and we plan to do so in the next release. As for inference, we can use sequence parallelism in case your GPU goes out of memory. A simple benchmark shows that sequence parallelism can achieve speedup
 

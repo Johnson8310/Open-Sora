@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This script runs a Gradio App for the Open-Sora model.
+This script runs a Gradio App for the InstaGen Studio model.
 
 Usage:
     python demo.py <config-path>
@@ -599,18 +599,18 @@ def main():
                     """
                 <div style='text-align: center;'>
                     <p align="center">
-                        <img src="https://github.com/hpcaitech/Open-Sora-Demo/blob/main/readme/icon.png" width="250"/>
+                        <img src="https://github.com/hpcaitech/InstaGen Studio-Demo/blob/main/readme/icon.png" width="250"/>
                     </p>
                     <div style="display: flex; gap: 10px; justify-content: center;">
-                        <a href="https://github.com/hpcaitech/Open-Sora/stargazers"><img src="https://img.shields.io/github/stars/hpcaitech/Open-Sora?style=social"></a>
-                        <a href="https://hpcaitech.github.io/Open-Sora/"><img src="https://img.shields.io/badge/Gallery-View-orange?logo=&amp"></a>
+                        <a href="https://github.com/hpcaitech/InstaGen Studio/stargazers"><img src="https://img.shields.io/github/stars/hpcaitech/InstaGen Studio?style=social"></a>
+                        <a href="https://hpcaitech.github.io/InstaGen Studio/"><img src="https://img.shields.io/badge/Gallery-View-orange?logo=&amp"></a>
                         <a href="https://discord.gg/kZakZzrSUT"><img src="https://img.shields.io/badge/Discord-join-blueviolet?logo=discord&amp"></a>
                         <a href="https://join.slack.com/t/colossalaiworkspace/shared_invite/zt-247ipg9fk-KRRYmUl~u2ll2637WRURVA"><img src="https://img.shields.io/badge/Slack-ColossalAI-blueviolet?logo=slack&amp"></a>
                         <a href="https://twitter.com/yangyou1991/status/1769411544083996787?s=61&t=jT0Dsx2d-MS5vS9rNM5e5g"><img src="https://img.shields.io/badge/Twitter-Discuss-blue?logo=twitter&amp"></a>
                         <a href="https://raw.githubusercontent.com/hpcaitech/public_assets/main/colossalai/img/WeChat.png"><img src="https://img.shields.io/badge/微信-小助手加群-green?logo=wechat&amp"></a>
-                        <a href="https://hpc-ai.com/blog/open-sora-v1.0"><img src="https://img.shields.io/badge/Open_Sora-Blog-blue"></a>
+                        <a href="https://hpc-ai.com/blog/InstaGen Studio-v1.0"><img src="https://img.shields.io/badge/Open_Sora-Blog-blue"></a>
                     </div>
-                    <h1 style='margin-top: 5px;'>Open-Sora: Democratizing Efficient Video Production for All</h1>
+                    <h1 style='margin-top: 5px;'>InstaGen Studio: Democratizing Efficient Video Production for All</h1>
                 </div>
                 """
                 )
